@@ -1,73 +1,31 @@
-# Docupilot Proxy Service
+const express = require("express");
+const cors = require("cors");
+const docupilotRoutes = require("./routes/docupilot");
 
-Backend proxy for generating legal documents via the Docupilot API. Solves CORS issues by forwarding requests from your frontend to Docupilot server-side.
+const app = express();
+const PORT = process.env.PORT || 3000;
 
-## How It Works
+app.use(
+  cors({
+    origin: process.env.ALLOWED_ORIGINS
+      ? process.env.ALLOWED_ORIGINS.split(",")
+      : ["https://consul.up.railway.app", "http://localhost:3000"],
+    methods: ["GET", "POST"],
+  })
+);
 
-```
-Frontend → POST /api/docupilot/generate → This Service → Docupilot API → PDF URL → Frontend
-```
+app.use(express.json());
 
-## Environment Variables
+app.get("/", (req, res) => {
+  res.json({ status: "ok", service: "Docupilot Proxy", version: "1.0.0" });
+});
 
-Set these in Railway dashboard → Service → Variables:
+app.get("/health", (req, res) => {
+  res.json({ status: "healthy" });
+});
 
-| Variable | Value |
-|----------|-------|
-| `DOCUPILOT_ORG_ID` | Your Docupilot org ID |
-| `DOCUPILOT_API_KEY` | Your Docupilot API key |
-| `DOCUPILOT_API_SECRET` | Your Docupilot API secret |
-| `ALLOWED_ORIGINS` | Comma-separated frontend URLs (e.g. `https://consul.up.railway.app`) |
+app.use("/api/docupilot", docupilotRoutes);
 
-## API Endpoints
-
-### `POST /api/docupilot/generate`
-
-Generate a document from a template.
-
-**Request:**
-```json
-{
-  "template": "notice-of-appearance",
-  "data": {
-    "judicial_circuit": "EIGHTEENTH",
-    "county": "SEMINOLE",
-    "state": "FLORIDA",
-    "plaintiff_name": "DANIELLE SHEPARDSON",
-    "case_number": "2020-CA-000775-08-G",
-    "defendant_name": "GWENNETH MCKENNA"
-  }
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "file_url": "https://docupilot-documents.s3.amazonaws.com/...",
-  "file_name": "notice-of-appearance.pdf"
-}
-```
-
-### `GET /api/docupilot/templates`
-
-List available templates.
-
-### `GET /health`
-
-Health check endpoint.
-
-## Adding New Templates
-
-1. Create the template in Docupilot dashboard
-2. Get the template ID from the URL
-3. Add it to `TEMPLATES` in `routes/docupilot.js`:
-
-```js
-const TEMPLATES = {
-  "notice-of-appearance": "b0c207b8",
-  "answer-to-complaint": "NEW_TEMPLATE_ID",
-};
-```
-
-4. Deploy.
+app.listen(PORT, () => {
+  console.log("Docupilot proxy running on port " + PORT);
+});
