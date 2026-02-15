@@ -5,15 +5,7 @@ const docupilotRoutes = require("./routes/docupilot");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(
-  cors({
-    origin: process.env.ALLOWED_ORIGINS
-      ? process.env.ALLOWED_ORIGINS.split(",")
-      : ["https://consul.up.railway.app", "http://localhost:3000"],
-    methods: ["GET", "POST"],
-  })
-);
-
+app.use(cors());
 app.use(express.json());
 
 app.get("/", (req, res) => {
