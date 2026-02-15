@@ -14,21 +14,21 @@ router.post("/generate", async (req, res) => {
     if (!data || typeof data !== "object") {
       return res.status(400).json({ success: false, error: "Missing data field" });
     }
-    const templateId = TEMPLATES[template];
-    const orgId = process.env.DOCUPILOT_ORG_ID;
-    const endpoint = "https://api.docupilot.app/document/create/" + orgId + "/" + templateId;
-    const response = await fetch(endpoint, {
+    var templateId = TEMPLATES[template];
+    var orgId = process.env.DOCUPILOT_ORG_ID;
+    var endpoint = "https://api.docupilot.app/documents/create/" + orgId + "/" + templateId + "/";
+    var response = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
-    const result = await response.json();
+    var result = await response.json();
     if (!response.ok) {
       return res.status(response.status).json({ success: false, error: "Docupilot error", details: result });
     }
-    const fileUrl = result?.data?.file_url || result?.file_url || result?.url || result?.data?.url;
+    var fileUrl = result && result.data && result.data.file_url ? result.data.file_url : (result.file_url || null);
     if (fileUrl) {
-      return res.json({ success: true, file_url: fileUrl, file_name: result?.data?.file_name || template + ".pdf" });
+      return res.json({ success: true, file_url: fileUrl, file_name: (result.data && result.data.file_name) || (template + ".pdf") });
     }
     return res.json({ success: true, raw: result });
   } catch (err) {
@@ -36,8 +36,8 @@ router.post("/generate", async (req, res) => {
   }
 });
 
-router.get("/templates", (req, res) => {
-  res.json({ templates: Object.entries(TEMPLATES).map(([name, id]) => ({ name, id })) });
+router.get("/templates", function(req, res) {
+  res.json({ templates: Object.keys(TEMPLATES) });
 });
 
 module.exports = router;
