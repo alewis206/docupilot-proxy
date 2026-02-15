@@ -1,0 +1,125 @@
+const express = require("express");
+const router = express.Router();
+
+// ============================================================
+// TEMPLATE REGISTRY
+// Add new templates here as you create them in Docupilot
+// ============================================================
+const TEMPLATES = {
+  "notice-of-appearance": "b0c207b8",
+  // "answer-to-complaint": "TEMPLATE_ID_HERE",
+  // "motion-to-dismiss":   "TEMPLATE_ID_HERE",
+};
+
+// ============================================================
+// POST /api/docupilot/generate
+// ============================================================
+// Body: {
+//   template: "notice-of-appearance",
+//   data: { judicial_circuit: "EIGHTEENTH", county: "SEMINOLE", ... }
+// }
+// Returns: { success: true, file_url: "https://...", file_name: "..." }
+// ============================================================
+router.post("/generate", async (req, res) => {
+  try {
+    const { template, data } = req.body;
+
+    // Validate request
+    if (!template) {
+      return res.status(400).json({
+        success: false,
+        error: "Missing 'template' field in request body",
+      });
+    }
+
+    if (!TEMPLATES[template]) {
+      return res.status(400).json({
+        success: false,
+        error: `Unknown template: "${template}". Available: ${Object.keys(TEMPLATES).join(", ")}`,
+      });
+    }
+
+    if (!data || typeof data !== "object") {
+      return res.status(400).json({
+        success: false,
+        error: "Missing or invalid 'data' field in request body",
+      });
+    }
+
+    const templateId = TEMPLATES[template];
+    const orgId = process.env.DOCUPILOT_ORG_ID;
+
+    if (!orgId) {
+      return res.status(500).json({
+        success: false,
+        error: "Server misconfigured: DOCUPILOT_ORG_ID not set",
+      });
+    }
+
+    const endpoint = `https://api.docupilot.app/document/create/${orgId}/${templateId}`;
+
+    console.log(`[Docupilot] Generating "${template}" → ${endpoint}`);
+
+    // Call Docupilot API (server-side, no CORS issues)
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      console.error("[Docupilot] Error response:", result);
+      return res.status(response.status).json({
+        success: false,
+        error: "Docupilot returned an error",
+        details: result,
+      });
+    }
+
+    // Extract file URL (Docupilot has a few response shapes)
+    const fileUrl =
+      result?.data?.file_url ||
+      result?.file_url ||
+      result?.url ||
+      result?.data?.url;
+
+    if (fileUrl) {
+      console.log(`[Docupilot] Success! PDF: ${fileUrl}`);
+      return res.json({
+        success: true,
+        file_url: fileUrl,
+        file_name: result?.data?.file_name || `${template}.pdf`,
+      });
+    }
+
+    // No URL found — return raw response for debugging
+    console.log("[Docupilot] No file_url in response:", result);
+    return res.json({
+      success: true,
+      message: "Document generated but no file URL found",
+      raw: result,
+    });
+  } catch (err) {
+    console.error("[Docupilot] Proxy error:", err);
+    return res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+});
+
+// ============================================================
+// GET /api/docupilot/templates
+// Returns list of available templates
+// ============================================================
+router.get("/templates", (req, res) => {
+  const available = Object.entries(TEMPLATES).map(([name, id]) => ({
+    name,
+    id,
+  }));
+  res.json({ templates: available });
+});
+
+module.exports = router;
