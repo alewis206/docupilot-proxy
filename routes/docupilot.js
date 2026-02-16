@@ -16,13 +16,17 @@ router.post("/generate", async (req, res) => {
     }
     var templateId = TEMPLATES[template];
     var orgId = process.env.DOCUPILOT_ORG_ID;
-    var endpoint = "https://cais.docupilot.app/dashboard/documents/create/" + orgId + "/" + templateId;
+    var endpoint = "https://cais.docupilot.app/documents/create/" + orgId + "/" + templateId + "/";
+    console.log("Calling Docupilot:", endpoint);
     var response = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
-    var result = await response.json();
+    var text = await response.text();
+    console.log("Docupilot response:", response.status, text);
+    var result;
+    try { result = JSON.parse(text); } catch(e) { return res.status(500).json({ success: false, error: "Non-JSON response", body: text.substring(0, 500) }); }
     if (!response.ok) {
       return res.status(response.status).json({ success: false, error: "Docupilot error", details: result });
     }
