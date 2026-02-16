@@ -16,19 +16,23 @@ router.post("/generate", async (req, res) => {
     }
     var templateId = TEMPLATES[template];
     var orgId = process.env.DOCUPILOT_ORG_ID;
-    var endpoint = "https://cais.docupilot.app/documents/create/" + orgId + "/" + templateId + "/";
-    console.log("Calling Docupilot:", endpoint);
+    var endpoint = "https://cais.docupilot.app/dashboard/documents/create/" + orgId + "/" + templateId;
+    console.log("Calling:", endpoint);
+    console.log("Payload:", JSON.stringify(data));
     var response = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
     var text = await response.text();
-    console.log("Docupilot response:", response.status, text);
+    console.log("Status:", response.status);
+    console.log("Response:", text.substring(0, 1000));
     var result;
-    try { result = JSON.parse(text); } catch(e) { return res.status(500).json({ success: false, error: "Non-JSON response", body: text.substring(0, 500) }); }
-    if (!response.ok) {
-      return res.status(response.status).json({ success: false, error: "Docupilot error", details: result });
+    try { result = JSON.parse(text); } catch(e) {
+      return res.status(500).json({ success: false, error: "Non-JSON response", status: response.status, body: text.substring(0, 500) });
+    }
+    if (result.status === "error") {
+      return res.status(400).json({ success: false, error: "Docupilot error", details: result });
     }
     var fileUrl = result && result.data && result.data.file_url ? result.data.file_url : (result.file_url || null);
     if (fileUrl) {
