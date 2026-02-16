@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 
 const TEMPLATES = {
-  "notice-of-appearance": "b0c207b8",
+  "notice-of-appearance": "1c29aee9",
 };
 
 router.post("/generate", async (req, res) => {
@@ -18,7 +18,6 @@ router.post("/generate", async (req, res) => {
     var orgId = process.env.DOCUPILOT_ORG_ID;
     var endpoint = "https://cais.docupilot.app/dashboard/documents/create/" + orgId + "/" + templateId;
     console.log("Calling:", endpoint);
-    console.log("Payload:", JSON.stringify(data));
     var response = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
