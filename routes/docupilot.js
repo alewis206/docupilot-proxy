@@ -16,7 +16,7 @@ router.post("/generate", async (req, res) => {
     }
     var templateId = TEMPLATES[template];
     var orgId = process.env.DOCUPILOT_ORG_ID;
-    var endpoint = "https://api.docupilot.app/documents/create/" + orgId + "/" + templateId + "/";
+    var endpoint = "https://cais.docupilot.app/dashboard/documents/create/" + orgId + "/" + templateId;
     var response = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
